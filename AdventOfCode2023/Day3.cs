@@ -1,10 +1,12 @@
-﻿using System.Text;
+﻿using System.Linq.Expressions;
+using System.Text;
 
 namespace AdventOfCode2023;
 
 internal class Day3 : IDay
 {
     private const char Dot = '.';
+    private const char Star = '*';
 
     private record struct Point(int X, int Y);
     private record struct Number(int Value, int XLeft, int XRight, int Y);
@@ -36,22 +38,27 @@ internal class Day3 : IDay
                     {
                         leftColumnIndex = columnIndex;
                     }
+                    if (columnIndex == line.Length)
+                    {
+                        leftColumnIndex = AddNumber(numbers, lineIndex, line, columnIndex, sb, leftColumnIndex);
+                    }
                 }
                 else if (character == Dot && sb.Length > 0)
                 {
-                    leftColumnIndex = AddNumber(numbers, lineIndex, line, columnIndex, sb, leftColumnIndex);
+                    leftColumnIndex = AddNumber(numbers, lineIndex, line, columnIndex - 1, sb, leftColumnIndex);
                 }
                 else if (character != Dot)
                 {
                     symbols.Add(new Point(columnIndex, lineIndex), character);
                     if (sb.Length > 0)
                     {
-                        leftColumnIndex = AddNumber(numbers, lineIndex, line, columnIndex, sb, leftColumnIndex);
+                        leftColumnIndex = AddNumber(numbers, lineIndex, line, columnIndex - 1, sb, leftColumnIndex);
                     }
                 }
             }
         }
 
+        var starSymbols = symbols.Where(s => s.Value == Star).ToDictionary(s => s.Key, s => new List<Number>())!;
         foreach (var number in numbers)
         {
             var adjacentPointsToCheck = new List<Point>()
@@ -74,15 +81,34 @@ internal class Day3 : IDay
             if (containsAdjacentSymbol)
             {
                 sum += number.Value;
+                foreach (var starSymbol in starSymbols)
+                {
+                    var numberIsAdjacentToStar = adjacentPointsToCheck.Any(p => starSymbol.Key == p);
+                    if (numberIsAdjacentToStar)
+                    {
+                        starSymbol.Value.Add(number);
+                    }
+                }
             }
         }
 
+        long sumGears = 0;
+        foreach (var starSymbol in starSymbols.Where(ss => ss.Value.Count == 2))
+        {
+            var gearsMultiply = 1;
+            foreach (var number in starSymbol.Value) 
+            {
+                gearsMultiply *= number.Value;
+            }
+            sumGears += gearsMultiply;
+        }
+
         Console.WriteLine($"{this.GetType().Name} result part 1: {sum}");
-        Console.WriteLine($"{this.GetType().Name} result part 2: {null}");
+        Console.WriteLine($"{this.GetType().Name} result part 2: {sumGears}");
 
         static int AddNumber(List<Number> numbers, int lineIndex, string? line, int columnIndex, StringBuilder sb, int leftColumnIndex)
         {
-            numbers.Add(new Number(Convert.ToInt32(sb.ToString()), leftColumnIndex, columnIndex - 1, lineIndex));
+            numbers.Add(new Number(Convert.ToInt32(sb.ToString()), leftColumnIndex, columnIndex, lineIndex));
             sb.Clear();
             leftColumnIndex = line.Length;
             return leftColumnIndex;
