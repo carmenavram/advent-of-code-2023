@@ -33,4 +33,5 @@ internal class InputReader
     public static string[] ProcessStringLineString(string line, string separator = " ") => line.Split(separator);
 
     public static int[] GetNumbersFromLine(string line) => Regex.Split(line, @"[^-\d]").Where(n => !string.IsNullOrEmpty(n)).Select(n => Convert.ToInt32(n)).ToArray();
+    public static long[] GetLongNumbersFromLine(string line) => Regex.Split(line, @"[^-\d]").Where(n => !string.IsNullOrEmpty(n)).Select(n => Convert.ToInt64(n)).ToArray();
 }
