@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace AdventOfCode2023;
 
@@ -34,4 +29,7 @@ internal class InputReader
 
     public static int[] GetNumbersFromLine(string line) => Regex.Split(line, @"[^-\d]").Where(n => !string.IsNullOrEmpty(n)).Select(n => Convert.ToInt32(n)).ToArray();
     public static long[] GetLongNumbersFromLine(string line) => Regex.Split(line, @"[^-\d]").Where(n => !string.IsNullOrEmpty(n)).Select(n => Convert.ToInt64(n)).ToArray();
+
+    public static int[] GetNumbersFromLineWithStartText(string startText, string line) =>
+        line.Replace(startText, string.Empty).Split(" ").Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => Convert.ToInt32(n.Trim())).ToArray();
 }
