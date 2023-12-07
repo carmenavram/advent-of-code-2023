@@ -1,110 +1,65 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AdventOfCode2023;
+﻿namespace AdventOfCode2023;
 
 internal class Day7 : IDay
 {
-    private const int FiveOfAKind = 1;
-    private const int FourOfAKind = 2;
-    private const int FullHouse = 3;
+    private const int FiveOfAKind = 7;
+    private const int FourOfAKind = 6;
+    private const int FullHouse = 5;
     private const int ThreeOfAKind = 4;
-    private const int TwoPair = 5;
-    private const int OnePair = 6;
-    private const int HighCard = 7;
+    private const int TwoPair = 3;
+    private const int OnePair = 2;
+    private const int HighCard = 1;
+    private const char J = 'J';
 
     private static readonly Dictionary<char, int> CardStrength = new Dictionary<char, int>
     {
-        ['A'] = 1,
-        ['K'] = 2,
-        ['Q'] = 3,
-        ['J'] = 4,
-        ['T'] = 5,
-        ['9'] = 6,
+        ['A'] = 13,
+        ['K'] = 12,
+        ['Q'] = 11,
+        ['J'] = 10,
+        ['T'] = 9,
+        ['9'] = 8,
         ['8'] = 7,
-        ['7'] = 8,
-        ['6'] = 9,
-        ['5'] = 10,
-        ['4'] = 11,
-        ['3'] = 12,
-        ['2'] = 13,
+        ['7'] = 6,
+        ['6'] = 5,
+        ['5'] = 4,
+        ['4'] = 3,
+        ['3'] = 2,
+        ['2'] = 1,
     };
 
     private static readonly Dictionary<char, int> CardStrength2 = new Dictionary<char, int>
     {
-        ['A'] = 1,
-        ['K'] = 2,
-        ['Q'] = 3,
-        ['T'] = 4,
-        ['9'] = 5,
-        ['8'] = 6,
+        ['A'] = 13,
+        ['K'] = 12,
+        ['Q'] = 11,
+        ['T'] = 10,
+        ['9'] = 9,
+        ['8'] = 8,
         ['7'] = 7,
-        ['6'] = 8,
-        ['5'] = 9,
-        ['4'] = 10,
-        ['3'] = 11,
-        ['2'] = 12,
-        ['J'] = 13,
+        ['6'] = 6,
+        ['5'] = 5,
+        ['4'] = 4,
+        ['3'] = 3,
+        ['2'] = 2,
+        ['J'] = 1,
     };
 
-    private record struct HandInfo(string Hand, int Bid, int HandType) : IComparable<HandInfo>
+    private record struct Hand(char[] Cards, int Bid, int HandType) : IHand
     {
-        public int CompareTo(HandInfo other)
-        {
-            if (this.HandType != other.HandType)
-            {
-                return this.HandType.CompareTo(other.HandType);
-            }
-
-            var cards = Hand.ToCharArray();
-            var otherCards = other.Hand.ToCharArray();
-            for (int cardIndex = 0 ; cardIndex < cards.Length; cardIndex++) 
-            {
-                var cardStrength = CardStrength[cards[cardIndex]];
-                var otherCardStrength = CardStrength[otherCards[cardIndex]];
-                if (cardStrength != otherCardStrength)
-                {
-                    return cardStrength.CompareTo(otherCardStrength);
-                }
-            }
-
-            return 0;
-        }
+        public readonly int CompareTo(IHand? other) => Compare(this, other, CardStrength);
     }
 
-    private record struct HandInfo2(string Hand, int Bid, int HandType) : IComparable<HandInfo2>
+    private record struct Hand2(char[] Cards, int Bid, int HandType) : IHand
     {
-        public int CompareTo(HandInfo2 other)
-        {
-            if (this.HandType != other.HandType)
-            {
-                return this.HandType.CompareTo(other.HandType);
-            }
-
-            var cards = Hand.ToCharArray();
-            var otherCards = other.Hand.ToCharArray();
-            for (int cardIndex = 0; cardIndex < cards.Length; cardIndex++)
-            {
-                var cardStrength = CardStrength2[cards[cardIndex]];
-                var otherCardStrength = CardStrength2[otherCards[cardIndex]];
-                if (cardStrength != otherCardStrength)
-                {
-                    return cardStrength.CompareTo(otherCardStrength);
-                }
-            }
-
-            return 0;
-        }
+        public readonly int CompareTo(IHand? other) => Compare(this, other, CardStrength2);
     }
 
     public void Solve(IList<string?> inputLines)
     {
-        var handInfos = new List<HandInfo>();
-        var handInfos2 = new List<HandInfo2>();
-        foreach (var line in inputLines) 
+        var hands = new List<IHand>();
+        var hands2 = new List<IHand>();
+        foreach (var line in inputLines)
         {
             if (string.IsNullOrWhiteSpace(line))
             {
@@ -112,154 +67,125 @@ internal class Day7 : IDay
             }
 
             var hand = InputReader.ProcessStringLine(line);
-            var handType = GetHandType(hand[0]);
-            handInfos.Add(new HandInfo(hand[0], Convert.ToInt32(hand[1]), handType));
-
-            var handType2 = GetHandType2(hand[0]);
-            handInfos2.Add(new HandInfo2(hand[0], Convert.ToInt32(hand[1]), handType2));
+            var cards = hand[0].ToCharArray();
+            hands.Add(new Hand(cards, Convert.ToInt32(hand[1]), GetHandType(cards)));
+            hands2.Add(new Hand2(cards, Convert.ToInt32(hand[1]), GetHandType2(cards)));
         }
 
-        // sort descending
-        handInfos.Sort((x, y) => y.CompareTo(x));
+        Console.WriteLine($"{this.GetType().Name} result part 1: {CalculateSum(hands)}");
+        Console.WriteLine($"{this.GetType().Name} result part 2: {CalculateSum(hands2)}");
+    }
+
+    private int CalculateSum(List<IHand> hands)
+    {
+        hands.Sort();
         var sum = 0;
         var rank = 0;
-        foreach (var handInfo in handInfos) 
+        foreach (var handInfo in hands)
         {
             rank++;
             sum += handInfo.Bid * rank;
         }
 
-        Console.WriteLine($"{this.GetType().Name} result part 1: {sum}");
-
-        // sort descending
-        handInfos2.Sort((x, y) => y.CompareTo(x));
-        sum = 0;
-        rank = 0;
-        foreach (var handInfo in handInfos2)
-        {
-            rank++;
-            sum += handInfo.Bid * rank;
-        }
-        Console.WriteLine($"{this.GetType().Name} result part 2: {sum}");
+        return sum;
     }
 
-    private int GetHandType(string hand)
+    private static int Compare(IHand hand, IHand? other, Dictionary<char, int> cardStrength)
     {
-        var handChars = hand.ToCharArray();
-        var distinctChars = handChars.Distinct();
-        var dict = new Dictionary<char, int>();
-        foreach (var character in distinctChars)
+        if (hand.HandType != other!.HandType)
         {
-            dict[character] = handChars.Count(hc => hc == character);
+            return hand.HandType.CompareTo(other.HandType);
         }
 
-        if (dict.Count == 1)
+        for (int cardIndex = 0; cardIndex < hand.Cards.Length; cardIndex++)
         {
-            return FiveOfAKind;
-        }
-
-        if (dict.Count == 2 && dict.Any(d => d.Value == 4))
-        {
-            return FourOfAKind;
-        }
-
-        if (dict.Count == 2 && dict.Any(d => d.Value == 3))
-        {
-            return FullHouse;
-        }
-
-        if (dict.Count == 3 && dict.Any(d => d.Value == 3))
-        {
-            return ThreeOfAKind;
-        }
-
-        if (dict.Count == 3 && dict.Any(d => d.Value == 2))
-        {
-            return TwoPair;
-        }
-
-        if (dict.Count == 4 && dict.Any(d => d.Value == 2))
-        {
-            return OnePair;
-        }
-
-        return HighCard;
-    }
-
-    private int GetHandType2(string hand)
-    {
-        var handChars = hand.ToCharArray();
-        var distinctChars = handChars.Distinct();
-        var dict = new Dictionary<char, int>();
-        foreach (var character in distinctChars)
-        {
-            dict[character] = handChars.Count(hc => hc == character);
-        }
-
-        if (dict.Count == 1)
-        {
-            return FiveOfAKind;
-        }
-
-        if (dict.Count == 2 && dict.Any(d => d.Value == 4) && !dict.ContainsKey('J'))
-        {
-            return FourOfAKind;
-        }
-        else if (dict.Count == 2 && dict.Any(d => d.Value == 4) && dict.ContainsKey('J'))
-        {
-            return FiveOfAKind;
-        }
-        
-        if (dict.Count == 2 && dict.Any(d => d.Value == 3) && !dict.ContainsKey('J'))
-        {
-            return FullHouse;
-        }
-        else if (dict.Count == 2 && dict.Any(d => d.Value == 3) && dict.ContainsKey('J'))
-        {
-            return FiveOfAKind;
-        }
-
-        if (dict.Count == 3 && dict.Any(d => d.Value == 3) && !dict.ContainsKey('J'))
-        {
-            return ThreeOfAKind;
-        }
-        else if (dict.Count == 3 && dict.Any(d => d.Value == 3) && dict.ContainsKey('J'))
-        {
-            return FourOfAKind;
-        }
-
-        if (dict.Count == 3 && dict.Any(d => d.Value == 2) && !dict.ContainsKey('J'))
-        {
-            return TwoPair;
-        }
-        else if (dict.Count == 3 && dict.Any(d => d.Value == 2) && dict.ContainsKey('J'))
-        {
-            if (dict['J'] == 2)
+            var currentCardStrength = cardStrength[hand.Cards[cardIndex]];
+            var otherCardStrength = cardStrength[other.Cards[cardIndex]];
+            if (currentCardStrength != otherCardStrength)
             {
-                return FourOfAKind;
-            }
-            else
-            {
-                return FullHouse;
+                return currentCardStrength.CompareTo(otherCardStrength);
             }
         }
 
-        if (dict.Count == 4 && dict.Any(d => d.Value == 2) && !dict.ContainsKey('J'))
+        return 0;
+    }
+
+    private int GetHandType(char[] cards)
+    {
+        var distinctCards = GetCardsDict(cards);
+        return distinctCards.Count switch
         {
-            return OnePair;
+            1 => FiveOfAKind,
+            2 => GetTypeForTwoDistinct(distinctCards),
+            3 => GetTypeForThreeDistinct(distinctCards),
+            4 => OnePair,
+            _ => HighCard
+        };
+    }
+
+    private static int GetTypeForTwoDistinct(Dictionary<char, int> distinctCards)
+    {
+        if (distinctCards.Any(d => d.Value == 4))
+        {
+            return FourOfAKind;
         }
-        else if (dict.Count == 4 && dict.Any(d => d.Value == 2) && dict.ContainsKey('J'))
+
+        return FullHouse;
+    }
+
+    private static int GetTypeForThreeDistinct(Dictionary<char, int> distinctCards)
+    {
+        if (distinctCards.Any(d => d.Value == 3))
         {
             return ThreeOfAKind;
         }
 
-        if (!dict.ContainsKey('J'))
+        return TwoPair;
+    }
+
+    private int GetHandType2(char[] cards)
+    {
+        var distinctCards = GetCardsDict(cards);
+
+        if (!distinctCards.ContainsKey(J))
         {
-            return HighCard;
+            return GetHandType(cards);
         }
-        else
+
+        return distinctCards.Count switch
         {
-            return OnePair;
+            1 => FiveOfAKind,
+            2 => FiveOfAKind,
+            3 => GetTypeForThreeDistinctWithJ(distinctCards),
+            4 => ThreeOfAKind,
+            _ => OnePair
+        };
+    }
+
+    private int GetTypeForThreeDistinctWithJ(Dictionary<char, int> distinctCards)
+    {
+        if (distinctCards.Any(d => d.Value == 3))
+        {
+            return FourOfAKind;
         }
+
+        if (distinctCards.Any(d => d.Value == 2) && distinctCards[J] == 2)
+        {
+            return FourOfAKind;
+        }
+
+        return FullHouse;
+    }
+
+    private static Dictionary<char, int> GetCardsDict(char[] cards)
+    {
+        var distinctCards = cards.Distinct();
+        var dict = new Dictionary<char, int>();
+        foreach (var card in distinctCards)
+        {
+            dict[card] = cards.Count(c => c == card);
+        }
+
+        return dict;
     }
 }
