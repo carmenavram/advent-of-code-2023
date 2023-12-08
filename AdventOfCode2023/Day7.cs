@@ -45,20 +45,12 @@ internal class Day7 : IDay
         ['J'] = 1,
     };
 
-    private record struct Hand(char[] Cards, int Bid, int HandType) : IHand
-    {
-        public readonly int CompareTo(IHand? other) => Compare(this, other, CardStrength);
-    }
-
-    private record struct Hand2(char[] Cards, int Bid, int HandType) : IHand
-    {
-        public readonly int CompareTo(IHand? other) => Compare(this, other, CardStrength2);
-    }
+    private record struct Hand(char[] Cards, int Bid, int HandType);
 
     public void Solve(IList<string?> inputLines)
     {
-        var hands = new List<IHand>();
-        var hands2 = new List<IHand>();
+        var hands = new List<Hand>();
+        var hands2 = new List<Hand>();
         foreach (var line in inputLines)
         {
             if (string.IsNullOrWhiteSpace(line))
@@ -69,16 +61,16 @@ internal class Day7 : IDay
             var hand = InputReader.ProcessStringLine(line);
             var cards = hand[0].ToCharArray();
             hands.Add(new Hand(cards, Convert.ToInt32(hand[1]), GetHandType(cards)));
-            hands2.Add(new Hand2(cards, Convert.ToInt32(hand[1]), GetHandType2(cards)));
+            hands2.Add(new Hand(cards, Convert.ToInt32(hand[1]), GetHandType2(cards)));
         }
 
-        Console.WriteLine($"{this.GetType().Name} result part 1: {CalculateSum(hands)}");
-        Console.WriteLine($"{this.GetType().Name} result part 2: {CalculateSum(hands2)}");
+        Console.WriteLine($"{this.GetType().Name} result part 1: {CalculateSum(hands, CardStrength)}");
+        Console.WriteLine($"{this.GetType().Name} result part 2: {CalculateSum(hands2, CardStrength2)}");
     }
 
-    private int CalculateSum(List<IHand> hands)
+    private int CalculateSum(List<Hand> hands, Dictionary<char, int> cardStrength)
     {
-        hands.Sort();
+        hands.Sort((x,y) => Compare(x, y, cardStrength));
         var sum = 0;
         var rank = 0;
         foreach (var handInfo in hands)
@@ -90,7 +82,7 @@ internal class Day7 : IDay
         return sum;
     }
 
-    private static int Compare(IHand hand, IHand? other, Dictionary<char, int> cardStrength)
+    private static int Compare(Hand hand, Hand other, Dictionary<char, int> cardStrength)
     {
         if (hand.HandType != other!.HandType)
         {
