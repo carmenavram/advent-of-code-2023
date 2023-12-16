@@ -6,8 +6,8 @@ internal class Day16 : IDay
     private enum Direction
     {
         Up,
-        Down, 
-        Left, 
+        Down,
+        Left,
         Right
     };
 
@@ -17,11 +17,9 @@ internal class Day16 : IDay
     private const char VerticalSplitter = '|';
     private const char HorizontalSplitter = '-';
     private record struct Point(int X, int Y);
-    private record struct Tile(Point Coord, char Type, bool IsEnergized);
+    private record struct Tile(Point Coord, char Type, bool IsEnergized, HashSet<Direction> EnergizedFrom);
 
     private Dictionary<Point, Tile> map = new Dictionary<Point, Tile>();
-    private Dictionary<int, List<Point>> beams = new Dictionary<int, List<Point>>();
-    private int beamIndex = 0;
 
     public void Solve(IList<string?> inputLines)
     {
@@ -29,7 +27,7 @@ internal class Day16 : IDay
         var startPoint = new Point(-1, 0);
         var direction = Direction.Right;
         var energizedTiles = CalculateEnergizedTiles(startPoint, direction, 0);
-        
+
         Console.WriteLine($"{this.GetType().Name} result part 1: {energizedTiles}");
 
         SolvePart2();
@@ -73,30 +71,20 @@ internal class Day16 : IDay
 
     private int CalculateEnergizedTiles(Point startPoint, Direction direction, int maxTiles)
     {
-        beams = new Dictionary<int, List<Point>>();
-        beamIndex = 1;
-        beams[beamIndex] = new List<Point>();
-       
-        MoveThroughTiles(startPoint, direction);
-
-        HashSet<Point> points = new HashSet<Point>();
-        for (var i = 1; i <= beams.Count; i++)
+        foreach (var tile in map)
         {
-            foreach (var beam in beams[i])
-            {
-                points.Add(beam);
-            }
+            SetIsEnergized(map, tile.Key, false, null);
         }
 
-        Console.WriteLine();
-        var startPointText = $"StartPoint: {startPoint.X} {startPoint.Y}";
-        Console.WriteLine($"{startPointText} Distinct Beams count: {points.Count}");
-        Console.WriteLine($"{startPointText} Energized tiles: {map.Count(m => m.Value.IsEnergized)}");
-        Console.WriteLine($"{startPointText} Energized Points not in the beam {string.Join(", ", map.Where(m => m.Value.IsEnergized && !points.Contains(m.Key)))}");
+        MoveThroughTiles(startPoint, direction);
+        var energizedTiles = map.Count(m => m.Value.IsEnergized);
 
-        if (maxTiles < points.Count)
+        //Console.WriteLine();
+        //Console.WriteLine($"StartPoint: {startPoint.X} {startPoint.Y} Energized tiles: {energizedTiles}");
+
+        if (maxTiles < energizedTiles)
         {
-            maxTiles = points.Count;
+            maxTiles = energizedTiles;
         }
 
         return maxTiles;
@@ -105,10 +93,9 @@ internal class Day16 : IDay
     private void MoveThroughTiles(Point startPoint, Direction direction)
     {
         var nextPoint = GetNextPoint(startPoint, direction);
-        if (map.ContainsKey(nextPoint) && !BeamContains(startPoint, direction)) 
+        if (map.ContainsKey(nextPoint) && !map[nextPoint].EnergizedFrom.Contains(direction))
         {
-            SetIsEnergized(map, nextPoint, true);
-            beams[beamIndex].Add(nextPoint);
+            SetIsEnergized(map, nextPoint, true, direction);
             switch (map[nextPoint].Type)
             {
                 case EmptySpace:
@@ -127,9 +114,7 @@ internal class Day16 : IDay
                     }
                     else
                     {
-                        beams[++beamIndex] = new List<Point>() { nextPoint };
                         MoveThroughTiles(nextPoint, Direction.Up);
-                        beams[++beamIndex] = new List<Point>() { nextPoint };
                         MoveThroughTiles(nextPoint, Direction.Down);
                     }
                     break;
@@ -140,33 +125,12 @@ internal class Day16 : IDay
                     }
                     else
                     {
-                        beams[++beamIndex] = new List<Point>() { nextPoint };
                         MoveThroughTiles(nextPoint, Direction.Left);
-                        beams[++beamIndex] = new List<Point>() { nextPoint };
                         MoveThroughTiles(nextPoint, Direction.Right);
                     }
                     break;
             }
         }
-    }
-
-    private bool BeamContains(Point point, Direction direction)
-    {
-        var nextPoint = GetNextPoint(point, direction);
-        foreach (var beam in beams) 
-        {
-            var index = beam.Value.IndexOf(point);
-            if (index > 0 && index + 1 < beam.Value.Count)
-            {
-                var nextPointInBeam = beam.Value[index + 1];
-                if (nextPoint == nextPointInBeam)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private static Point GetNextPoint(Point startPoint, Direction direction)
@@ -178,12 +142,12 @@ internal class Day16 : IDay
             Direction.Left => new Point(-1, 0),
             Direction.Right => new Point(1, 0),
             _ => throw new NotImplementedException()
-        }; 
+        };
 
         return new Point(startPoint.X + diff.X, startPoint.Y + diff.Y);
     }
 
-    private static Direction GetDirectionMirrorF(Direction direction) 
+    private static Direction GetDirectionMirrorF(Direction direction)
     {
         return direction switch
         {
@@ -207,10 +171,18 @@ internal class Day16 : IDay
         };
     }
 
-    private static void SetIsEnergized(Dictionary<Point, Tile> map, Point point, bool isEnergized)
+    private static void SetIsEnergized(Dictionary<Point, Tile> map, Point point, bool isEnergized, Direction? direction)
     {
         var tile = map[point];
-        map[point] = new Tile(point, tile.Type, isEnergized);
+        if (direction.HasValue)
+        {
+            tile.EnergizedFrom.Add(direction.Value);
+        }
+        else
+        {
+            tile.EnergizedFrom = new HashSet<Direction>();
+        }
+        map[point] = new Tile(point, tile.Type, isEnergized, tile.EnergizedFrom);
     }
 
     private static Dictionary<Point, Tile> ReadMap(IList<string?> inputLines)
@@ -229,7 +201,7 @@ internal class Day16 : IDay
             foreach (var tile in tiles)
             {
                 var coord = new Point(x, y);
-                map.Add(coord, new Tile(coord, tile, false));
+                map.Add(coord, new Tile(coord, tile, false, new HashSet<Direction>()));
                 x++;
             }
             y++;
